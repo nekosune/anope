@@ -50,7 +50,21 @@ void Mail::Message::Run()
 	success = true;
 	SetExitState();
 }
+Mail::RedditMessage::RedditMessage(const Anope::string &mailto, const Anope::string &s, const Anope::string &m) : Thread(), mail_to(mailto),  subject(s), message(m), dont_quote_addresses(Config->GetBlock("mail")->Get<bool>("dontquoteaddresses")), success(false)
+{
+}
 
+Mail::RedditMessage::~RedditMessage()
+{
+	if (success)
+		Log(LOG_NORMAL, "mail") << "Successfully delivered mail for " << mail_to ;
+	else
+		Log(LOG_NORMAL, "mail") << "Error delivering mail for " << mail_to ;
+}
+void Mail::RedditMessage::Run()
+{
+
+}
 bool Mail::Send(User *u, NickCore *nc, BotInfo *service, const Anope::string &subject, const Anope::string &message)
 {
 	if (!nc || !service || subject.empty() || message.empty())
@@ -159,4 +173,29 @@ bool Mail::Validate(const Anope::string &email)
 	}
 
 	return has_period;
+}
+
+bool Mail::ValidateReddit(const Anope::string &email)
+{
+	static char specials [] = { '(', ')', '<', '>', '@', ',', ';', ':', '\\', '\"', '[', ']', ' ','`','\'','?','=','.','/' };
+	if (email.empty())
+		return false;
+	Anope::string copy = email;
+	size_t pos = copy.find_first_of("/u/");
+	if (pos == Anope::string::npos)
+		return false;
+	copy = copy.substr(pos + 3);
+	if (copy.empty())
+		return false;
+
+	/* Check for forbidden characters in the name */
+	for (unsigned i = 0, end = copy.length(); i < end; ++i)
+	{
+		if (copy[i] <= 44 || copy[i] >= 123)
+			return false;
+		for (unsigned int j = 0; j < 19; ++j)
+			if (copy[i] == specials[j])
+				return false;
+	}
+	return true;
 }
